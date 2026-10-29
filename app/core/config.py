@@ -1,9 +1,11 @@
 """Application configuration loaded from environment variables and optional .env file."""
 
+from __future__ import annotations
+
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -181,6 +183,26 @@ class Settings(BaseSettings):
         from app.core.memory_diagnostics import memory_constrained_default
 
         return memory_constrained_default()
+
+    @model_validator(mode="after")
+    def _apply_render_host_defaults(self) -> Settings:
+        import os
+
+        from app.core.memory_diagnostics import is_render_host
+
+        if not is_render_host():
+            return self
+        if os.getenv("MEMORY_CONSTRAINED") is None:
+            self.memory_constrained = True
+        if os.getenv("SESSION_STORE_ROOT") is None and self.session_store_root.startswith(
+            "data/"
+        ):
+            self.session_store_root = "/tmp/ephemeral_sessions"
+        if os.getenv("RERANK_ENABLED") is None and self.rerank_enabled:
+            self.rerank_enabled = False
+        if os.getenv("EPHEMERAL_SESSIONS_ENABLED") is None and not self.ephemeral_sessions_enabled:
+            self.ephemeral_sessions_enabled = True
+        return self
 
     cors_allow_origins: str = Field(
         default="",

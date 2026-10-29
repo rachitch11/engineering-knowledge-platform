@@ -59,7 +59,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         validate_settings_at_startup(settings)
     except SettingsValidationError as exc:
         logger.error("settings_validation_failed: %s", exc)
-        raise
     from app.core.memory_diagnostics import log_memory_event
 
     log_memory_event(

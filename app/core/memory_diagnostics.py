@@ -43,4 +43,10 @@ def memory_constrained_default() -> bool:
     explicit = os.getenv("MEMORY_CONSTRAINED")
     if explicit is not None:
         return explicit.strip().lower() in {"1", "true", "yes", "on"}
+    return is_render_host()
+
+
+def is_render_host() -> bool:
+    import os
+
     return os.getenv("RENDER", "").strip().lower() in {"true", "1", "yes"}

@@ -92,14 +92,22 @@ def main() -> None:
     st.caption(f"Backend: {backend_url}")
     client = get_backend_client(backend_url)
     ephemeral_on_backend = False
+    backend_ok = False
     with st.sidebar:
         st.header("Connection status")
         try:
             health = client.health()
+            backend_ok = True
             st.success(f"Backend: {health.get('status', 'unknown')}")
             ephemeral_on_backend = bool(health.get("ephemeral_sessions_enabled"))
         except httpx.HTTPError as exc:
             st.error(f"Backend unreachable: {exc}")
+            if "502" in str(exc):
+                st.caption(
+                    "502 on Render Free often means the process was killed (usually out-of-memory "
+                    "during PDF embedding). Check Render logs; set RERANK_ENABLED=false, "
+                    "MEMORY_CONSTRAINED=true, and GEMINI_API_KEY in the API service env."
+                )
         try:
             llm = client.llm_health()
             if llm.get("status") == "ok":
@@ -113,7 +121,12 @@ def main() -> None:
         except httpx.HTTPError as exc:
             st.warning(f"Could not check LLM via backend: {exc}")
 
-        if ephemeral_on_backend and st.session_state.get("backend_session_id"):
+        if not backend_ok:
+            st.warning(
+                "Backend health check failed — session mode unknown. "
+                "Fix the API service first (see Render logs)."
+            )
+        elif ephemeral_on_backend and st.session_state.get("backend_session_id"):
             st.caption(
                 "Private session: your uploads and answers are isolated from other visitors."
             )
@@ -122,7 +135,7 @@ def main() -> None:
                 "Ephemeral mode is enabled on the API but this tab has no session id. "
                 "Use **New private session** or restart the API with matching settings."
             )
-        elif not ephemeral_on_backend:
+        elif backend_ok and not ephemeral_on_backend:
             st.warning(
                 "Shared index mode (legacy): all visitors share one document store. "
                 "Enable `EPHEMERAL_SESSIONS_ENABLED=true` on the API and restart for "
