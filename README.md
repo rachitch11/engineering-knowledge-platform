@@ -328,6 +328,21 @@ When `EPHEMERAL_SESSIONS_ENABLED=false`, the app uses the legacy shared `CHROMA_
 | `CORS_ALLOW_ORIGINS` | Only if a browser SPA calls the API directly |
 | Authentication | **Not included** — public exposure requires your own auth / network controls |
 
+**Render Free (512 MB):** use `render.yaml` or set on the **API web service** (not Streamlit alone):
+
+| Variable | Value |
+| --- | --- |
+| `ENVIRONMENT` | `production` |
+| `EPHEMERAL_SESSIONS_ENABLED` | `true` |
+| `SESSION_STORE_ROOT` | `/tmp/ephemeral_sessions` |
+| `MEMORY_CONSTRAINED` | `true` (auto when `RENDER=true`) |
+| `RERANK_ENABLED` | `false` |
+| `INDEX_EMBEDDING_BATCH_SIZE` | `8` |
+| `GEMINI_API_KEY` | your key (secret) |
+| Start command | `/app/scripts/start_api.sh` (binds `$PORT`, one worker) |
+
+Streamlit (if separate) needs `BACKEND_URL=https://your-api.onrender.com`. A **502 on `/health`** means the API process is down (crash/OOM/misconfigured start command), not a Streamlit bug. Check **Render → Logs** for `Killed` or startup errors. Embedding + cross-encoder together often exceed 512 MB; hybrid retrieval still works without reranking. Logs include `memory event=... rss_mb=...` (no document content).
+
 **Docker (API, mock LLM default, ephemeral sessions):**
 
 ```bash

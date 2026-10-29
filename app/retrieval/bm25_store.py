@@ -33,6 +33,22 @@ class BM25Store:
 
     def rebuild_from_records(self, records: list[ChunkRecord]) -> None:
         self._records = list(records)
+        self._rebuild_index()
+
+    def remove_document(self, document_id: str) -> None:
+        filtered = [record for record in self._records if record.document_id != document_id]
+        if len(filtered) == len(self._records):
+            return
+        self._records = filtered
+        self._rebuild_index()
+
+    def add_records(self, records: list[ChunkRecord]) -> None:
+        if not records:
+            return
+        self._records.extend(records)
+        self._rebuild_index()
+
+    def _rebuild_index(self) -> None:
         if not self._records:
             self._bm25 = None
             self._persist_snapshot()

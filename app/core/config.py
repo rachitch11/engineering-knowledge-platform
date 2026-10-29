@@ -1,9 +1,11 @@
 """Application configuration loaded from environment variables and optional .env file."""
 
+from __future__ import annotations
+
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -161,6 +163,57 @@ class Settings(BaseSettings):
         default="data/ephemeral_sessions",
         validation_alias="SESSION_STORE_ROOT",
     )
+    index_embedding_batch_size: int = Field(
+        default=32,
+        validation_alias="INDEX_EMBEDDING_BATCH_SIZE",
+        ge=1,
+        le=256,
+    )
+    max_index_chunks_per_document: int = Field(
+        default=0,
+        validation_alias="MAX_INDEX_CHUNKS_PER_DOCUMENT",
+        ge=0,
+        description="Cap chunks indexed per upload (0 = unlimited). Use on 512MB hosts.",
+    )
+    memory_constrained: bool = Field(
+        default=False,
+        validation_alias="MEMORY_CONSTRAINED",
+        description="Smaller embedding batches; recommended on 512MB hosts (Render Free).",
+    )
+
+    @field_validator("memory_constrained", mode="before")
+    @classmethod
+    def _default_memory_constrained_on_render(cls, value: object) -> object:
+        if value is not None and str(value).strip() != "":
+            return value
+        from app.core.memory_diagnostics import memory_constrained_default
+
+        return memory_constrained_default()
+
+    @model_validator(mode="after")
+    def _apply_render_host_defaults(self) -> Settings:
+        import os
+
+        from app.core.memory_diagnostics import is_render_host
+
+        if not is_render_host():
+            return self
+        if os.getenv("MEMORY_CONSTRAINED") is None:
+            self.memory_constrained = True
+        if os.getenv("SESSION_STORE_ROOT") is None and self.session_store_root.startswith(
+            "data/"
+        ):
+            self.session_store_root = "/tmp/ephemeral_sessions"
+        if os.getenv("RERANK_ENABLED") is None and self.rerank_enabled:
+            self.rerank_enabled = False
+        if os.getenv("EPHEMERAL_SESSIONS_ENABLED") is None and not self.ephemeral_sessions_enabled:
+            self.ephemeral_sessions_enabled = True
+        if os.getenv("INDEX_EMBEDDING_BATCH_SIZE") is None and self.index_embedding_batch_size > 4:
+            self.index_embedding_batch_size = 4
+        if os.getenv("MAX_INDEX_CHUNKS_PER_DOCUMENT") is None and self.max_index_chunks_per_document == 0:
+            self.max_index_chunks_per_document = 64
+        return self
+
     cors_allow_origins: str = Field(
         default="",
         validation_alias="CORS_ALLOW_ORIGINS",

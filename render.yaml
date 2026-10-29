@@ -1,0 +1,32 @@
+# Render Blueprint — API web service (512 MB Free tier)
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: engineering-knowledge-platform
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    dockerCommand: /app/scripts/start_api.sh
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: EPHEMERAL_SESSIONS_ENABLED
+        value: "true"
+      - key: SESSION_STORE_ROOT
+        value: /tmp/ephemeral_sessions
+      - key: MEMORY_CONSTRAINED
+        value: "true"
+      - key: RERANK_ENABLED
+        value: "false"
+      - key: INDEX_EMBEDDING_BATCH_SIZE
+        value: "4"
+      - key: MAX_INDEX_CHUNKS_PER_DOCUMENT
+        value: "64"
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: SINGLE_USER_MODE
+        value: "false"

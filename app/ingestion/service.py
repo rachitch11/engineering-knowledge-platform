@@ -36,6 +36,7 @@ def ingest_bytes(
         )
 
     parsed = parse_document(content, filename)
+    del content
     document_id = stable_document_id(filename)
     chunks = chunk_document(
         document_id,
