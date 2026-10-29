@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+streamlit
+chromadb
+rank-bm25
+sentence-transformers
+pymupdf
+markdown
+beautifulsoup4
+python-multipart
+pydantic-settings
+httpx
+pytest

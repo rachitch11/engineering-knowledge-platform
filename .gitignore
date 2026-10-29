@@ -1,0 +1,25 @@
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.pytest_cache/
+.streamlit/secrets.toml
+data/processed/
+data/ephemeral_sessions/
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Generated indexes and temporary evaluation data
+data/eval-tmp/
+data/evaluation/run/
+data/processed/chroma/
+data/processed/bm25_index.json
+data/ephemeral_sessions/

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "chunk_id": "87837dca-3cd1-546b-ade7-a9d30962b2fa_chunk_0000",
+      "document_id": "87837dca-3cd1-546b-ade7-a9d30962b2fa",
+      "filename": "synthetic_resume.md",
+      "file_type": "markdown",
+      "chunk_index": 0,
+      "page_number": null,
+      "text": "Rachit Choudhary Software Engineer Technical skills: Python, Django, React, HTML, CSS, JavaScript, SQL. Experience in design and integration of software systems."
+    }
+  ]
+}
