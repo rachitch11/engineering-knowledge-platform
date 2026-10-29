@@ -19,9 +19,11 @@ class BackendClient:
         timeout: float = 180.0,
         *,
         session_id: str | None = None,
+        probe_timeout: float = 45.0,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self.probe_timeout = probe_timeout
         self.session_id = session_id
 
     def _headers(self) -> dict[str, str]:
@@ -47,10 +49,10 @@ class BackendClient:
             response.raise_for_status()
 
     def health(self) -> dict[str, Any]:
-        return self._request("GET", "/health")
+        return self._request("GET", "/health", timeout=self.probe_timeout)
 
     def llm_health(self) -> dict[str, Any]:
-        return self._request("GET", "/health/llm")
+        return self._request("GET", "/health/llm", timeout=self.probe_timeout)
 
     def ollama_health(self) -> dict[str, Any]:
         return self._request("GET", "/health/ollama")
@@ -124,8 +126,10 @@ class BackendClient:
         path: str,
         *,
         json: dict[str, Any] | None = None,
+        timeout: float | None = None,
     ) -> dict[str, Any]:
-        with httpx.Client(timeout=self.timeout) as client:
+        effective_timeout = self.timeout if timeout is None else timeout
+        with httpx.Client(timeout=effective_timeout) as client:
             response = client.request(
                 method,
                 f"{self.base_url}{path}",

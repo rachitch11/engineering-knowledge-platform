@@ -28,6 +28,31 @@ def get_backend_url() -> str:
     return os.getenv("BACKEND_URL", "http://127.0.0.1:8000").rstrip("/")
 
 
+def fetch_backend_health(client: BackendClient, *, attempts: int = 4) -> dict:
+    """GET /health with retries for Render cold start (502/503 while waking)."""
+    import time
+
+    last_error: httpx.HTTPError | None = None
+    for attempt in range(attempts):
+        try:
+            return client.health()
+        except httpx.HTTPStatusError as exc:
+            last_error = exc
+            if exc.response.status_code in (502, 503, 504) and attempt + 1 < attempts:
+                time.sleep(min(2.0 * (attempt + 1), 8.0))
+                continue
+            raise
+        except httpx.RequestError as exc:
+            last_error = exc
+            if attempt + 1 < attempts:
+                time.sleep(min(2.0 * (attempt + 1), 8.0))
+                continue
+            raise
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("health check failed without exception")
+
+
 def render_error(message: str) -> None:
     st.error(message)
 
@@ -53,7 +78,11 @@ def get_backend_client(base_url: str) -> BackendClient:
                 elif response.status_code != 404:
                     response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code != 404:
+            if exc.response.status_code == 404:
+                pass
+            elif exc.response.status_code >= 500:
+                session_id = None
+            else:
                 raise
         except httpx.ConnectError:
             session_id = None
@@ -90,13 +119,18 @@ def main() -> None:
     st.title("Engineering Knowledge Intelligence Platform")
     backend_url = get_backend_url()
     st.caption(f"Backend: {backend_url}")
+    if backend_url.startswith("http://127.0.0.1") or backend_url.startswith("http://localhost"):
+        st.warning(
+            "BACKEND_URL points at localhost. On Streamlit Cloud or a remote UI, set "
+            "`BACKEND_URL=https://engineering-knowledge-platform.onrender.com` in secrets/env."
+        )
     client = get_backend_client(backend_url)
     ephemeral_on_backend = False
     backend_ok = False
     with st.sidebar:
         st.header("Connection status")
         try:
-            health = client.health()
+            health = fetch_backend_health(client)
             backend_ok = True
             st.success(f"Backend: {health.get('status', 'unknown')}")
             ephemeral_on_backend = bool(health.get("ephemeral_sessions_enabled"))
