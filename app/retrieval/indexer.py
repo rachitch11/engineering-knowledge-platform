@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import gc
 import logging
 from pathlib import Path
 
@@ -54,7 +53,7 @@ class IndexService:
     def _embedding_batch_size(self) -> int:
         configured = self._settings.index_embedding_batch_size
         if self._settings.memory_constrained:
-            return min(configured, 8)
+            return min(configured, 4)
         return configured
 
     def _sync_bm25_from_chroma(self) -> None:
@@ -86,6 +85,12 @@ class IndexService:
                 raise IndexingError("All chunks in one index call must share document_id.")
 
         records = self._records_from_chunks(chunks)
+        max_chunks = self._settings.max_index_chunks_per_document
+        if max_chunks > 0 and len(records) > max_chunks:
+            raise IndexingError(
+                f"Document produced {len(records)} chunks; limit is {max_chunks} on this "
+                "host. Shorten the file or raise MAX_INDEX_CHUNKS_PER_DOCUMENT."
+            )
         batch_size = self._embedding_batch_size()
         log_memory_event(
             "index_start",
@@ -99,6 +104,7 @@ class IndexService:
         self._bm25.remove_document(document_id)
 
         indexed = 0
+        bm25_pending: list[ChunkRecord] = []
         try:
             for start in range(0, len(records), batch_size):
                 batch = records[start : start + batch_size]
@@ -110,11 +116,22 @@ class IndexService:
                 except ValueError as exc:
                     raise IndexingError(str(exc)) from exc
                 self._chroma.upsert_records(batch, embeddings)
-                self._bm25.add_records(batch)
+                if self._settings.memory_constrained:
+                    bm25_pending.extend(batch)
+                else:
+                    self._bm25.add_records(batch)
                 indexed += len(batch)
                 del embeddings, batch
                 if self._settings.memory_constrained:
-                    gc.collect()
+                    from app.core.memory_diagnostics import release_memory
+
+                    release_memory()
+            if self._settings.memory_constrained and bm25_pending:
+                self._bm25.add_records(bm25_pending)
+                del bm25_pending
+                from app.core.memory_diagnostics import release_memory
+
+                release_memory()
         except IndexingError:
             self._rollback_document(document_id)
             raise

@@ -19,7 +19,9 @@ services:
       - key: RERANK_ENABLED
         value: "false"
       - key: INDEX_EMBEDDING_BATCH_SIZE
-        value: "8"
+        value: "4"
+      - key: MAX_INDEX_CHUNKS_PER_DOCUMENT
+        value: "64"
       - key: LLM_PROVIDER
         value: gemini
       - key: GEMINI_API_KEY

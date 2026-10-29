@@ -55,11 +55,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         get_settings.cache_clear()
         app.state.settings = get_settings()
     settings: Settings = app.state.settings
+    from app.core.memory_diagnostics import configure_runtime_memory, log_memory_event
+
+    configure_runtime_memory()
     try:
         validate_settings_at_startup(settings)
     except SettingsValidationError as exc:
         logger.error("settings_validation_failed: %s", exc)
-    from app.core.memory_diagnostics import log_memory_event
 
     log_memory_event(
         "startup",
@@ -67,6 +69,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         ephemeral_sessions=settings.ephemeral_sessions_enabled,
         memory_constrained=settings.memory_constrained,
         rerank_enabled=settings.rerank_enabled,
+        max_index_chunks=settings.max_index_chunks_per_document,
     )
     if settings.memory_constrained and settings.rerank_enabled:
         logger.warning(

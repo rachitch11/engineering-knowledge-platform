@@ -32,6 +32,8 @@ def test_render_auto_defaults_when_env_vars_omitted() -> None:
     assert settings.rerank_enabled is False
     assert settings.memory_constrained is True
     assert settings.session_store_root == "/tmp/ephemeral_sessions"
+    assert settings.index_embedding_batch_size == 4
+    assert settings.max_index_chunks_per_document == 64
 
 
 def test_production_gemini_missing_key_does_not_raise() -> None:

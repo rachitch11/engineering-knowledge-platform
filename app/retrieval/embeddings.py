@@ -46,7 +46,10 @@ class LazySentenceTransformerEmbedding:
             return
         from sentence_transformers import SentenceTransformer
 
-        model = SentenceTransformer(self._model_name)
+        model = SentenceTransformer(
+            self._model_name,
+            model_kwargs={"low_cpu_mem_usage": True},
+        )
         self._model = model
         self._dimension = int(model.get_sentence_embedding_dimension())
 

@@ -169,6 +169,12 @@ class Settings(BaseSettings):
         ge=1,
         le=256,
     )
+    max_index_chunks_per_document: int = Field(
+        default=0,
+        validation_alias="MAX_INDEX_CHUNKS_PER_DOCUMENT",
+        ge=0,
+        description="Cap chunks indexed per upload (0 = unlimited). Use on 512MB hosts.",
+    )
     memory_constrained: bool = Field(
         default=False,
         validation_alias="MEMORY_CONSTRAINED",
@@ -202,6 +208,10 @@ class Settings(BaseSettings):
             self.rerank_enabled = False
         if os.getenv("EPHEMERAL_SESSIONS_ENABLED") is None and not self.ephemeral_sessions_enabled:
             self.ephemeral_sessions_enabled = True
+        if os.getenv("INDEX_EMBEDDING_BATCH_SIZE") is None and self.index_embedding_batch_size > 4:
+            self.index_embedding_batch_size = 4
+        if os.getenv("MAX_INDEX_CHUNKS_PER_DOCUMENT") is None and self.max_index_chunks_per_document == 0:
+            self.max_index_chunks_per_document = 64
         return self
 
     cors_allow_origins: str = Field(
