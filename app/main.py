@@ -60,6 +60,20 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     except SettingsValidationError as exc:
         logger.error("settings_validation_failed: %s", exc)
         raise
+    from app.core.memory_diagnostics import log_memory_event
+
+    log_memory_event(
+        "startup",
+        environment=settings.environment,
+        ephemeral_sessions=settings.ephemeral_sessions_enabled,
+        memory_constrained=settings.memory_constrained,
+        rerank_enabled=settings.rerank_enabled,
+    )
+    if settings.memory_constrained and settings.rerank_enabled:
+        logger.warning(
+            "memory_constrained_with_rerank: cross-encoder plus embedding may exceed "
+            "512MB; set RERANK_ENABLED=false on small hosts if uploads are OOM-killed."
+        )
     cleanup_task: asyncio.Task[None] | None = None
     if settings.ephemeral_sessions_enabled:
         from app.core.session_manager import init_session_manager

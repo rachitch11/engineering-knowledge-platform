@@ -15,7 +15,7 @@ class EmbeddingModel(Protocol):
     @property
     def dimension(self) -> int: ...
 
-    def encode(self, texts: list[str]) -> list[list[float]]: ...
+    def encode(self, texts: list[str], *, batch_size: int | None = None) -> list[list[float]]: ...
 
 
 def normalize_embedding_input(text: str) -> str:
@@ -50,14 +50,16 @@ class LazySentenceTransformerEmbedding:
         self._model = model
         self._dimension = int(model.get_sentence_embedding_dimension())
 
-    def encode(self, texts: list[str]) -> list[list[float]]:
+    def encode(self, texts: list[str], *, batch_size: int | None = None) -> list[list[float]]:
         self._load()
         assert self._model is not None
         normalized = [normalize_embedding_input(text) for text in texts]
+        effective_batch = batch_size or min(32, max(len(normalized), 1))
         vectors = self._model.encode(  # type: ignore[union-attr]
             normalized,
             normalize_embeddings=True,
             show_progress_bar=False,
+            batch_size=effective_batch,
         )
         return np.asarray(vectors, dtype=float).tolist()
 
@@ -72,7 +74,8 @@ class MockEmbedding:
     def dimension(self) -> int:
         return self._dimension
 
-    def encode(self, texts: list[str]) -> list[list[float]]:
+    def encode(self, texts: list[str], *, batch_size: int | None = None) -> list[list[float]]:
+        _ = batch_size
         vectors: list[list[float]] = []
         for text in texts:
             normalized = normalize_embedding_input(text)

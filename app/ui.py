@@ -55,6 +55,10 @@ def get_backend_client(base_url: str) -> BackendClient:
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code != 404:
                 raise
+        except httpx.ConnectError:
+            session_id = None
+        except httpx.RequestError:
+            session_id = None
         st.session_state.backend_session_id = session_id
         st.session_state.backend_client = BackendClient(base_url, session_id=session_id)
     return st.session_state.backend_client  # type: ignore[no-any-return]

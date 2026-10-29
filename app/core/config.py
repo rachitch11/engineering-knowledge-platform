@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -161,6 +161,27 @@ class Settings(BaseSettings):
         default="data/ephemeral_sessions",
         validation_alias="SESSION_STORE_ROOT",
     )
+    index_embedding_batch_size: int = Field(
+        default=32,
+        validation_alias="INDEX_EMBEDDING_BATCH_SIZE",
+        ge=1,
+        le=256,
+    )
+    memory_constrained: bool = Field(
+        default=False,
+        validation_alias="MEMORY_CONSTRAINED",
+        description="Smaller embedding batches; recommended on 512MB hosts (Render Free).",
+    )
+
+    @field_validator("memory_constrained", mode="before")
+    @classmethod
+    def _default_memory_constrained_on_render(cls, value: object) -> object:
+        if value is not None and str(value).strip() != "":
+            return value
+        from app.core.memory_diagnostics import memory_constrained_default
+
+        return memory_constrained_default()
+
     cors_allow_origins: str = Field(
         default="",
         validation_alias="CORS_ALLOW_ORIGINS",

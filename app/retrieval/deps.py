@@ -20,16 +20,26 @@ def bind_services(
 ) -> None:
     """Initialize shared services for tests or explicit app setup."""
     from app.generation.deps import bind_generation_services, build_reranker
+    from app.retrieval.embeddings import LazySentenceTransformerEmbedding
 
     if embedding_model is not None:
         app.state.embedding_model = embedding_model  # type: ignore[attr-defined]
+    elif not getattr(app.state, "embedding_model", None):
+        app.state.embedding_model = LazySentenceTransformerEmbedding(  # type: ignore[attr-defined]
+            settings.embedding_model
+        )
+
     app.state.reranker = build_reranker(settings, reranker)  # type: ignore[attr-defined]
     app.state.llm_provider = llm_provider  # type: ignore[attr-defined]
 
     if settings.ephemeral_sessions_enabled:
         return
 
-    index_service = IndexService.from_settings(settings, embedding_model=embedding_model)
+    shared_embedding = getattr(app.state, "embedding_model", None)
+    index_service = IndexService.from_settings(
+        settings,
+        embedding_model=shared_embedding,
+    )
     search_service = SearchService(index_service, settings)
     app.state.index_service = index_service  # type: ignore[attr-defined]
     app.state.search_service = search_service  # type: ignore[attr-defined]

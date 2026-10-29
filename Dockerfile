@@ -24,7 +24,7 @@ COPY app ./app
 COPY scripts ./scripts
 COPY streamlit_app.py ./
 
-RUN mkdir -p /data/ephemeral_sessions
+RUN chmod +x /app/scripts/start_api.sh && mkdir -p /data/ephemeral_sessions
 
 VOLUME ["/data/ephemeral_sessions"]
 EXPOSE 8000
@@ -32,4 +32,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
   CMD python -c "import httpx; httpx.get('http://127.0.0.1:8000/health', timeout=3).raise_for_status()"
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+CMD ["/app/scripts/start_api.sh"]

@@ -328,6 +328,8 @@ When `EPHEMERAL_SESSIONS_ENABLED=false`, the app uses the legacy shared `CHROMA_
 | `CORS_ALLOW_ORIGINS` | Only if a browser SPA calls the API directly |
 | Authentication | **Not included** — public exposure requires your own auth / network controls |
 
+**Render Free (512 MB):** set `MEMORY_CONSTRAINED=true` (defaults on when `RENDER=true`), `INDEX_EMBEDDING_BATCH_SIZE=8`, and usually `RERANK_ENABLED=false`. Embedding + cross-encoder together often exceed 512 MB; hybrid retrieval still works without reranking. Startup and indexing logs include `memory event=... rss_mb=...` (no document content). Use `scripts/start_api.sh` as the start command so `$PORT` is bound.
+
 **Docker (API, mock LLM default, ephemeral sessions):**
 
 ```bash
